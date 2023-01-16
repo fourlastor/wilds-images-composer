@@ -25,4 +25,9 @@ repositories {
 
 dependencies {
     implementation(libs.gdx.core)
+    nativesDesktop(libs.gdx.platform)
 }
+
+fun DependencyHandlerScope.nativesDesktop(
+    provider: Provider<MinimalExternalModuleDependency>,
+) = runtimeOnly(variantOf(provider) { classifier("natives-desktop") })
