@@ -1,10 +1,12 @@
 [versions]
 compose = "1.2.0"
+gdx = "1.11.0"
 kotlin = "1.7.10"
 korge = "3.4.0"
 shadow = "7.1.2"
 [libraries]
 korge-korim = { module = "com.soywiz.korlibs.korim:korim", version.ref = "korge" }
+gdx-core = { module = "com.badlogicgames.gdx:gdx", version.ref = "gdx" }
 [plugins]
 compose = { id = "org.jetbrains.compose", version.ref = "compose" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

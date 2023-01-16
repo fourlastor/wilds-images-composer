@@ -9,6 +9,7 @@ pluginManagement {
 }
 
 include("app")
+include("image-converter")
 
 dependencyResolutionManagement {
     versionCatalogs { create("libs") { from(files("libs.versions.toml")) } }
