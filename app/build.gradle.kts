@@ -9,10 +9,18 @@ plugins {
     alias(libs.plugins.compose)
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.shadow)
+    alias(libs.plugins.spotless)
 }
 
 group = "io.github.fourlastor"
 version = "1.0-SNAPSHOT"
+
+spotless {
+    isEnforceCheck = false
+    kotlin {
+        ktfmt()
+    }
+}
 
 repositories {
     google()

@@ -4,11 +4,18 @@
 )
 plugins {
     java
-    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.spotless)
 }
 
 java.sourceCompatibility = JavaVersion.VERSION_11
 java.targetCompatibility = JavaVersion.VERSION_11
+
+spotless {
+    isEnforceCheck = false
+    java {
+        palantirJavaFormat()
+    }
+}
 
 repositories {
     google()

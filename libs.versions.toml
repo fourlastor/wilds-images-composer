@@ -4,6 +4,7 @@ gdx = "1.11.0"
 kotlin = "1.7.10"
 korge = "3.4.0"
 shadow = "7.1.2"
+spotless = "6.10.0"
 [libraries]
 korge-korim = { module = "com.soywiz.korlibs.korim:korim", version.ref = "korge" }
 gdx-core = { module = "com.badlogicgames.gdx:gdx", version.ref = "gdx" }
@@ -13,3 +14,4 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
