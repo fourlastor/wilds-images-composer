@@ -10,6 +10,7 @@ pluginManagement {
 
 include("app")
 include("image-converter")
+include("goblin-importer")
 
 dependencyResolutionManagement {
     versionCatalogs { create("libs") { from(files("libs.versions.toml")) } }
