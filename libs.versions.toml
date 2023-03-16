@@ -1,14 +1,20 @@
 [versions]
-compose = "1.2.0"
+compose = "1.3.0"
+decompose = "1.0.0"
 gdx = "1.11.0"
-kotlin = "1.7.10"
+kotlin = "1.8.0"
 korge = "3.4.0"
+lwjgl = "3.3.1"
 shadow = "7.1.2"
 spotless = "6.10.0"
 [libraries]
-korge-korim = { module = "com.soywiz.korlibs.korim:korim", version.ref = "korge" }
+decompose-core = { module = "com.arkivanov.decompose:decompose", version.ref = "decompose" }
+decompose-jetbrains = { module = "com.arkivanov.decompose:extensions-compose-jetbrains", version.ref = "decompose" }
 gdx-core = { module = "com.badlogicgames.gdx:gdx", version.ref = "gdx" }
 gdx-platform = { module = "com.badlogicgames.gdx:gdx-platform", version.ref = "gdx" }
+korge-korim = { module = "com.soywiz.korlibs.korim:korim", version.ref = "korge" }
+lwjgl-core = { module = "org.lwjgl:lwjgl", version.ref = "lwjgl" }
+lwjgl-nfd = { module = "org.lwjgl:lwjgl-nfd", version.ref = "lwjgl" }
 [plugins]
 compose = { id = "org.jetbrains.compose", version.ref = "compose" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

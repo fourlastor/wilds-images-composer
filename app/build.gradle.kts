@@ -38,8 +38,21 @@ dependencies {
     runtimeOnly(compose.desktop.macos_x64)
     runtimeOnly(compose.desktop.macos_arm64)
     runtimeOnly(compose.desktop.windows_x64)
+    implementation(libs.decompose.core)
+    implementation(libs.decompose.jetbrains)
     implementation(libs.korge.korim)
+    implementation(libs.lwjgl.core)
+    implementation(libs.lwjgl.nfd)
+    for (it in listOf("linux", "macos", "macos-arm64", "windows")) {
+        natives(libs.lwjgl.core, it)
+        natives(libs.lwjgl.nfd, it)
+    }
 }
+
+fun DependencyHandlerScope.natives(
+    provider: Provider<MinimalExternalModuleDependency>,
+    classifier: String,
+) = runtimeOnly(variantOf(provider) { classifier("natives-$classifier") })
 
 compose.desktop {
     application {
