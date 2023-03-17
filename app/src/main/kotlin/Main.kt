@@ -11,14 +11,14 @@ import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.jetbrains.lifecycle.LifecycleController
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import io.github.fourlastor.composer.NavHostComponent
-import javax.swing.SwingUtilities
-import javax.swing.UIManager
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import org.jetbrains.skiko.MainUIDispatcher
 
 @OptIn(ExperimentalDecomposeApi::class)
 fun main() {
-    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
     val lifecycle = LifecycleRegistry()
-    val root = runOnMainThreadBlocking { NavHostComponent(DefaultComponentContext(lifecycle)) }
+    val root = runBlocking { withContext(MainUIDispatcher) { NavHostComponent(DefaultComponentContext(lifecycle)) } }
 
     application {
         Window(onCloseRequest = ::exitApplication) {
@@ -28,10 +28,4 @@ fun main() {
             MaterialTheme(colors = lightColors(primary = Color(0xffa9c484))) { root.render() }
         }
     }
-}
-
-private inline fun <T : Any> runOnMainThreadBlocking(crossinline block: () -> T): T {
-    lateinit var result: T
-    SwingUtilities.invokeAndWait { result = block() }
-    return result
 }
