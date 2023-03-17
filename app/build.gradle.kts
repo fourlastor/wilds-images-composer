@@ -42,10 +42,10 @@ dependencies {
     implementation(libs.decompose.jetbrains)
     implementation(libs.korge.korim)
     implementation(libs.lwjgl.core)
-    implementation(libs.lwjgl.nfd)
+    implementation(libs.lwjgl.tinyfd)
     for (it in listOf("linux", "macos", "macos-arm64", "windows")) {
         natives(libs.lwjgl.core, it)
-        natives(libs.lwjgl.nfd, it)
+        natives(libs.lwjgl.tinyfd, it)
     }
 }
 

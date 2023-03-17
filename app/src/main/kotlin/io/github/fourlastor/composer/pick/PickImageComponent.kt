@@ -223,6 +223,6 @@ data class Images(
     val shiny: ImageBitmap? = null,
 )
 
-enum class PickImage(val filter: String) {
-    NONE(""), FRONT("gif"), BACK("png"), SHINY("png")
+enum class PickImage(val filter: List<String>) {
+    NONE(emptyList()), FRONT(listOf("gif")), BACK(listOf("png")), SHINY(listOf("png"))
 }
