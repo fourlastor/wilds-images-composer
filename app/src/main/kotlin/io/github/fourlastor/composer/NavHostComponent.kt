@@ -5,7 +5,7 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.extensions.compose.jetbrains.stack.Children
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
-import com.arkivanov.decompose.router.stack.push
+import com.arkivanov.decompose.router.stack.replaceCurrent
 import com.arkivanov.essenty.parcelable.Parcelable
 import io.github.fourlastor.composer.conversion.ConversionComponent
 import io.github.fourlastor.composer.pick.PickImageComponent
@@ -18,8 +18,8 @@ class NavHostComponent(
     private val navigation = StackNavigation<ScreenConfig>()
     private val stack = childStack(
         source = navigation,
+        childFactory = ::createScreenComponent,
         initialConfiguration = ScreenConfig.PickFiles,
-        childFactory = ::createScreenComponent
     )
 
     private fun createScreenComponent(
@@ -31,17 +31,45 @@ class NavHostComponent(
             goToConversion = ::goToConversion
         )
 
-        ScreenConfig.Preview -> PreviewComponent(context)
-        ScreenConfig.Conversion -> ConversionComponent(context = context, goToPreview = ::goToPreview)
+        is ScreenConfig.Preview -> PreviewComponent(
+            context,
+            screenConfig.front,
+            screenConfig.frontShiny,
+            screenConfig.frontInverted,
+            screenConfig.back,
+            screenConfig.backShiny,
+            screenConfig.backInverted,
+            screenConfig.shinyPalette
+        )
+
+        is ScreenConfig.Conversion -> ConversionComponent(
+            context = context,
+            goToPreview = ::goToPreview,
+            front = screenConfig.front,
+            back = screenConfig.back,
+            shiny = screenConfig.shiny,
+        )
     }
 
     private fun goToConversion(front: File, back: File, shiny: File) {
-        navigation.push(ScreenConfig.Conversion)
+        navigation.replaceCurrent(ScreenConfig.Conversion(front, back, shiny))
     }
 
 
-    private fun goToPreview() {
-        navigation.push(ScreenConfig.Preview)
+    private fun goToPreview(
+        front: List<File>,
+        frontShiny: List<File>,
+        frontInverted: List<File>,
+        back: File,
+        backShiny: File,
+        backInverted: File,
+        shinyPalette: ShinyPalette,
+    ) {
+        navigation.replaceCurrent(
+            ScreenConfig.Preview(
+                front, frontShiny, frontInverted, back, backShiny, backInverted, shinyPalette
+            )
+        )
     }
 
 
@@ -56,7 +84,20 @@ class NavHostComponent(
 
     private sealed class ScreenConfig : Parcelable {
         object PickFiles : ScreenConfig()
-        object Preview : ScreenConfig()
-        object Conversion : ScreenConfig()
+        data class Preview(
+            val front: List<File>,
+            val frontShiny: List<File>,
+            val frontInverted: List<File>,
+            val back: File,
+            val backShiny: File,
+            val backInverted: File,
+            val shinyPalette: ShinyPalette,
+        ) : ScreenConfig()
+
+        data class Conversion(
+            val front: File,
+            val back: File,
+            val shiny: File,
+        ) : ScreenConfig()
     }
 }

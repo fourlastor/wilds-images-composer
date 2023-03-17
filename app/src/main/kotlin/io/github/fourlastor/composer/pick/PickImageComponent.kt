@@ -26,12 +26,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.doOnDestroy
 import io.github.fourlastor.composer.Component
+import io.github.fourlastor.composer.extensions.toBitmap
 import io.github.fourlastor.composer.ui.FileLoadDialog
 import io.github.fourlastor.composer.ui.HorizontalSeparator
 import io.github.fourlastor.composer.ui.VerticalSeparator
@@ -95,9 +95,6 @@ class PickImageComponent(
     }
 }
 
-private fun File.toBitmap(): ImageBitmap =
-    inputStream().buffered().use(::loadImageBitmap)
-
 @Composable
 private fun PickImage(
     modifier: Modifier = Modifier,
@@ -116,21 +113,23 @@ private fun PickImage(
             }
         }
     }
+    var lastPath: String? by remember { mutableStateOf(null) }
     if (pickImage != PickImage.NONE) {
         FileLoadDialog(
             onCloseRequest = {
                 if (it != null) {
+                    lastPath = it.parentFile.absolutePath
                     onImagePicked(it, pickImage)
                 }
                 pickImage = PickImage.NONE
             },
             filterList = pickImage.filter,
-            initialPath = "/home/daniele/pokewilds/pokemon-sprites-staging"
+            initialPath = lastPath
         )
     }
     Column(modifier = modifier) {
         Box(Modifier.fillMaxWidth().height(80.dp).padding(8.dp)) {
-            Text("You can also drag and drop files on this window", fontSize = 18.sp)
+            Text("You can also drag and drop files on this window (WIP)", fontSize = 18.sp)
             val onClick: () -> Unit by remember(continueState, onContinue) {
                 derivedStateOf {
                     continueState.let {

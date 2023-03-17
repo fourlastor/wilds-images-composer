@@ -19,6 +19,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,37 +27,71 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.ComponentContext
 import io.github.fourlastor.composer.Component
+import io.github.fourlastor.composer.ShinyPalette
+import io.github.fourlastor.composer.extensions.toBitmap
 import io.github.fourlastor.composer.ui.HorizontalSeparator
 import io.github.fourlastor.composer.ui.VerticalSeparator
+import java.io.File
 
 class PreviewComponent(
     private val context: ComponentContext,
+    val front: List<File>,
+    val frontShiny: List<File>,
+    val frontInverted: List<File>,
+    val back: File,
+    val backShiny: File,
+    val backInverted: File,
+    val shinyPalette: ShinyPalette,
 ) : Component, ComponentContext by context {
 
     @Composable
     override fun render() {
-        Preview(Modifier.fillMaxSize())
+        val frontImages by remember(front, frontShiny) {
+            derivedStateOf {
+                listOf(
+                    front[0],
+                    frontShiny[0]
+                ).map { it.toBitmap() }
+            }
+        }
+        val backImages by remember(back, backShiny) { derivedStateOf { listOf(back, backShiny).map { it.toBitmap() } } }
+        val animationImages by remember(front) { derivedStateOf { front.map { it.toBitmap() } } }
+        Preview(
+            modifier = Modifier.fillMaxSize(),
+            front = frontImages,
+            back = backImages,
+            animation = animationImages,
+            palette = shinyPalette,
+        )
     }
 }
 
 @Composable
-private fun Preview(modifier: Modifier) {
+private fun Preview(
+    modifier: Modifier,
+    front: List<ImageBitmap>,
+    back: List<ImageBitmap>,
+    animation: List<ImageBitmap>,
+    palette: ShinyPalette,
+) {
     Column(modifier) {
         Row(modifier = Modifier.weight(5f).fillMaxWidth()) {
-            PreviewImage(text = "Front", count = 2, modifier = Modifier.weight(1f).fillMaxHeight())
+            PreviewImage(text = "Front", images = front, modifier = Modifier.weight(1f).fillMaxHeight())
             VerticalSeparator()
-            PreviewImage(text = "Back", count = 2, modifier = Modifier.weight(1f).fillMaxHeight())
+            PreviewImage(text = "Back", images = back, modifier = Modifier.weight(1f).fillMaxHeight())
             VerticalSeparator()
-            PreviewImage(text = "Animation", count = 6, modifier = Modifier.weight(1f).fillMaxHeight())
+            PreviewImage(text = "Animation", images = animation, modifier = Modifier.weight(1f).fillMaxHeight())
         }
         HorizontalSeparator()
         Row(modifier = Modifier.weight(3f).fillMaxWidth()) {
-            SwapPaletteControl(modifier = Modifier.weight(1f).fillMaxHeight())
+            SwapPaletteControl(modifier = Modifier.weight(1f).fillMaxHeight(), palette = palette)
             VerticalSeparator()
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 var name by remember { mutableStateOf("") }
@@ -77,9 +112,10 @@ private fun Preview(modifier: Modifier) {
 @Composable
 private fun SwapPaletteControl(
     modifier: Modifier,
+    palette: ShinyPalette,
 ) {
-    val color1 = remember { Color.Green }
-    val color2 = remember { Color.Blue }
+    val color1 = remember { palette.first.second.let { Color(it.r, it.g, it.b) } }
+    val color2 = remember { palette.second.second.let { Color(it.r, it.g, it.b) } }
     Column(modifier.padding(4.dp)) {
         Text("Shiny palette", fontSize = 24.sp)
         Row(Modifier.fillMaxWidth().weight(1f)) {
@@ -106,9 +142,8 @@ private fun ColorPreview(
 }
 
 @Composable
-private fun PreviewImage(text: String, count: Int, modifier: Modifier) {
+private fun PreviewImage(text: String, images: List<ImageBitmap>, modifier: Modifier) {
     Column(modifier.padding(4.dp)) {
-        val color = remember { Color(0xffea7286) }
         Box(modifier = Modifier.fillMaxWidth()) {
             Text(text, fontSize = 30.sp, modifier = Modifier.align(Alignment.Center))
         }
@@ -118,9 +153,14 @@ private fun PreviewImage(text: String, count: Int, modifier: Modifier) {
             verticalArrangement = Arrangement.spacedBy(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            items(count) {
+            items(images.size) {
                 BoxWithConstraints {
-                    Box(modifier = Modifier.size(maxWidth * 1f).align(Alignment.Center).background(color))
+                    Image(
+                        modifier = Modifier.size(maxWidth * 1f).align(Alignment.Center),
+                        bitmap = images[it],
+                        contentDescription = null,
+                        filterQuality = FilterQuality.None,
+                    )
                 }
             }
         }
