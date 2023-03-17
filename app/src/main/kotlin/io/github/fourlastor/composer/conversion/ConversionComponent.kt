@@ -56,7 +56,7 @@ class ConversionComponent(
                 val backImage = withContext(Dispatchers.IO) { PNG.readImage(back.toVfs().readAsSyncStream()) }
                 val shinyImage = withContext(Dispatchers.IO) { PNG.readImage(shiny.toVfs().readAsSyncStream()) }
                 val frontFrames = frontImage.frames.map { it.bitmap }
-
+                val durations = frontImage.frames.map { it.time }
                 progress.update { Progress.InProgress(0.3f) }
                 frontFrames.forEach { it.fixColors() }
                 val backBmp = backImage.mainBitmap
@@ -109,7 +109,8 @@ class ConversionComponent(
                             backFile,
                             backShinyFile,
                             backInvertedFile,
-                            palette
+                            palette,
+                            durations
                         )
                     )
                 }

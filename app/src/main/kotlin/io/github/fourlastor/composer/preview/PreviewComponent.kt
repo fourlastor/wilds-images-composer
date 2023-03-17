@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.ComponentContext
+import com.soywiz.klock.TimeSpan
 import io.github.fourlastor.composer.CompleteConversion
 import io.github.fourlastor.composer.Component
 import io.github.fourlastor.composer.ShinyPalette
@@ -70,6 +72,7 @@ class PreviewComponent(
             back = backImages,
             animation = animationImages,
             palette = conversion.palette,
+            durations = conversion.durations,
         )
     }
 }
@@ -81,14 +84,27 @@ private fun Preview(
     back: List<ImageBitmap>,
     animation: List<ImageBitmap>,
     palette: ShinyPalette,
+    durations: List<TimeSpan>,
 ) {
+    val durationBgColor = remember { Color(0f, 0f, 0f, 0.4f) }
     Column(modifier) {
         Row(modifier = Modifier.weight(5f).fillMaxWidth()) {
             PreviewImage(text = "Front", images = front, modifier = Modifier.weight(1f).fillMaxHeight())
             VerticalSeparator()
             PreviewImage(text = "Back", images = back, modifier = Modifier.weight(1f).fillMaxHeight())
             VerticalSeparator()
-            PreviewImage(text = "Animation", images = animation, modifier = Modifier.weight(1f).fillMaxHeight())
+            PreviewImage(
+                text = "Animation",
+                images = animation,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                extra = {
+                    Text(
+                        text = "${durations[it]}",
+                        modifier = Modifier.align(Alignment.BottomStart).background(durationBgColor),
+                        color = Color.White,
+                    )
+                }
+            )
         }
         HorizontalSeparator()
         Row(modifier = Modifier.weight(3f).fillMaxWidth()) {
@@ -143,7 +159,12 @@ private fun ColorPreview(
 }
 
 @Composable
-private fun PreviewImage(text: String, images: List<ImageBitmap>, modifier: Modifier) {
+private fun PreviewImage(
+    text: String,
+    images: List<ImageBitmap>,
+    modifier: Modifier,
+    extra: @Composable BoxScope.(Int) -> Unit = {},
+) {
     Column(modifier.padding(4.dp)) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Text(text, fontSize = 30.sp, modifier = Modifier.align(Alignment.Center))
@@ -156,12 +177,15 @@ private fun PreviewImage(text: String, images: List<ImageBitmap>, modifier: Modi
         ) {
             items(images.size) {
                 BoxWithConstraints {
-                    Image(
-                        modifier = Modifier.size(maxWidth * 1f).align(Alignment.Center),
-                        bitmap = images[it],
-                        contentDescription = null,
-                        filterQuality = FilterQuality.None,
-                    )
+                    Box(Modifier.size(maxWidth * 1f).align(Alignment.Center)) {
+                        Image(
+                            modifier = Modifier.fillMaxSize(),
+                            bitmap = images[it],
+                            contentDescription = null,
+                            filterQuality = FilterQuality.None,
+                        )
+                        extra(it)
+                    }
                 }
             }
         }

@@ -1,5 +1,6 @@
 package io.github.fourlastor.composer
 
+import com.soywiz.klock.TimeSpan
 import java.io.File
 
 data class CompleteConversion(
@@ -10,4 +11,5 @@ data class CompleteConversion(
     val backShiny: File,
     val backInverted: File,
     val palette: ShinyPalette,
+    val durations: List<TimeSpan>,
 )
