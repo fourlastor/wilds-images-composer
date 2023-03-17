@@ -4,9 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
-import org.lwjgl.PointerBuffer
-import org.lwjgl.system.MemoryStack
-import org.lwjgl.util.tinyfd.TinyFileDialogs
+import org.lwjgl.system.MemoryUtil
+import org.lwjgl.util.nfd.NativeFileDialog
 import java.io.File
 
 @Composable
@@ -48,7 +47,6 @@ private fun FileDialog(
     DisposableEffect(Unit) {
         val job = scope.launch {
             val path = (initialPath ?: System.getProperty("user.home"))
-                .let { if (it.endsWith("/")) it else "$it/" }
                 .let {
                     if (inWindows()) {
                         it.replace("/", "\\")
@@ -56,20 +54,34 @@ private fun FileDialog(
                         it
                     }
                 }
-            MemoryStack.stackPush().use { stack ->
-                val filter: PointerBuffer? = filterList.takeIf { it.isNotEmpty() }
-                    ?.let { stack.mallocPointer(filterList.size) }
-                    ?.also { filter -> filterList.forEach { filter.put(stack.UTF8("*.$it")) } }
-//                println(filterList)
-                println(filter)
-                val filterDescription = (if (filterList.isEmpty()) "*.*" else filterList.asSequence().map { "*.$it" }
-                    .joinToString(", ")).let { "Files ($it)" }
-                val result = if (type == Type.Load) {
-                    TinyFileDialogs.tinyfd_openFileDialog("Pick a file", path, filter, filterDescription, false)
-                } else {
-                    TinyFileDialogs.tinyfd_saveFileDialog("Pick a file", path, filter, filterDescription)
+
+            val pathPointer = MemoryUtil.memAllocPointer(1)
+
+            try {
+                val status = when (type) {
+                    Type.Load -> NativeFileDialog.NFD_OpenDialog(filterList.joinToString(","), path, pathPointer)
+                    Type.Save -> NativeFileDialog.NFD_SaveDialog(filterList.joinToString(","), path, pathPointer)
                 }
-                onCloseRequest(result?.let { File(it) })
+
+
+                if (status == NativeFileDialog.NFD_CANCEL) {
+                    onCloseRequest(null)
+                    return@launch
+                }
+
+                if (status != NativeFileDialog.NFD_OKAY) {
+                    println("Error with native dialog")
+                    onCloseRequest(null)
+                    return@launch
+                }
+
+                val result = pathPointer.getStringUTF8(0)
+                NativeFileDialog.nNFD_Free(pathPointer.get(0))
+                onCloseRequest(File(result))
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            } finally {
+                MemoryUtil.memFree(pathPointer)
             }
         }
 

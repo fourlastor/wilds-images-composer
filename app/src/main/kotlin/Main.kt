@@ -21,7 +21,7 @@ fun main() {
     val root = runBlocking { withContext(MainUIDispatcher) { NavHostComponent(DefaultComponentContext(lifecycle)) } }
 
     application {
-        Window(onCloseRequest = ::exitApplication) {
+        Window(title = "Wilds Image Composer", onCloseRequest = ::exitApplication) {
             val windowState = rememberWindowState(size = DpSize(900.dp, 700.dp))
 
             LifecycleController(lifecycle, windowState)
