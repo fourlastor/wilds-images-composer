@@ -33,42 +33,43 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.ComponentContext
+import io.github.fourlastor.composer.CompleteConversion
 import io.github.fourlastor.composer.Component
 import io.github.fourlastor.composer.ShinyPalette
 import io.github.fourlastor.composer.extensions.toBitmap
 import io.github.fourlastor.composer.ui.HorizontalSeparator
 import io.github.fourlastor.composer.ui.VerticalSeparator
-import java.io.File
 
 class PreviewComponent(
     private val context: ComponentContext,
-    val front: List<File>,
-    val frontShiny: List<File>,
-    val frontInverted: List<File>,
-    val back: File,
-    val backShiny: File,
-    val backInverted: File,
-    val shinyPalette: ShinyPalette,
+    private val conversion: CompleteConversion,
 ) : Component, ComponentContext by context {
 
     @Composable
     override fun render() {
-        val frontImages by remember(front, frontShiny) {
+        val frontImages by remember(conversion) {
             derivedStateOf {
                 listOf(
-                    front[0],
-                    frontShiny[0]
+                    conversion.front[0],
+                    conversion.frontShiny[0]
                 ).map { it.toBitmap() }
             }
         }
-        val backImages by remember(back, backShiny) { derivedStateOf { listOf(back, backShiny).map { it.toBitmap() } } }
-        val animationImages by remember(front) { derivedStateOf { front.map { it.toBitmap() } } }
+        val backImages by remember(conversion) {
+            derivedStateOf {
+                listOf(
+                    conversion.back,
+                    conversion.backShiny
+                ).map { it.toBitmap() }
+            }
+        }
+        val animationImages by remember(conversion) { derivedStateOf { conversion.front.map { it.toBitmap() } } }
         Preview(
             modifier = Modifier.fillMaxSize(),
             front = frontImages,
             back = backImages,
             animation = animationImages,
-            palette = shinyPalette,
+            palette = conversion.palette,
         )
     }
 }

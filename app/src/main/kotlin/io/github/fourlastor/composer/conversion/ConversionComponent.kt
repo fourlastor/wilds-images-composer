@@ -23,6 +23,7 @@ import com.soywiz.korim.color.RGBA
 import com.soywiz.korim.format.GIF
 import com.soywiz.korim.format.PNG
 import com.soywiz.korio.file.std.toVfs
+import io.github.fourlastor.composer.CompleteConversion
 import io.github.fourlastor.composer.Component
 import io.github.fourlastor.composer.ShinyPalette
 import kotlinx.coroutines.CoroutineScope
@@ -39,7 +40,7 @@ import java.util.*
 
 class ConversionComponent(
     private val context: ComponentContext,
-    private val goToPreview: (List<File>, List<File>, List<File>, File, File, File, ShinyPalette) -> Unit,
+    private val goToPreview: (CompleteConversion) -> Unit,
     front: File,
     back: File,
     shiny: File,
@@ -101,13 +102,15 @@ class ConversionComponent(
                 backBmp.toShiny(invertedPalette).saveTo(backInvertedFile)
                 progress.update {
                     Progress.Complete(
-                        frontFiles,
-                        frontShinyFiles,
-                        frontInvertedFiles,
-                        backFile,
-                        backShinyFile,
-                        backInvertedFile,
-                        palette
+                        CompleteConversion(
+                            frontFiles,
+                            frontShinyFiles,
+                            frontInvertedFiles,
+                            backFile,
+                            backShinyFile,
+                            backInvertedFile,
+                            palette
+                        )
                     )
                 }
             }
@@ -214,15 +217,7 @@ class ConversionComponent(
         LaunchedEffect(progress is Progress.Complete) {
             val complete = progress as? Progress.Complete ?: return@LaunchedEffect
             delay(200)
-            goToPreview(
-                complete.front,
-                complete.frontShiny,
-                complete.frontInverted,
-                complete.back,
-                complete.backShiny,
-                complete.backInverted,
-                complete.palette
-            )
+            goToPreview(complete.conversion)
         }
         Conversion(progress.progress, Modifier.fillMaxSize())
     }
@@ -249,13 +244,7 @@ private sealed interface Progress {
 
     data class InProgress(override val progress: Float) : Progress
     data class Complete(
-        val front: List<File>,
-        val frontShiny: List<File>,
-        val frontInverted: List<File>,
-        val back: File,
-        val backShiny: File,
-        val backInverted: File,
-        val palette: ShinyPalette,
+        val conversion: CompleteConversion,
     ) : Progress {
         override val progress: Float = 1f
     }

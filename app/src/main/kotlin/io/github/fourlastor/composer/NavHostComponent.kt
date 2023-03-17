@@ -33,13 +33,7 @@ class NavHostComponent(
 
         is ScreenConfig.Preview -> PreviewComponent(
             context,
-            screenConfig.front,
-            screenConfig.frontShiny,
-            screenConfig.frontInverted,
-            screenConfig.back,
-            screenConfig.backShiny,
-            screenConfig.backInverted,
-            screenConfig.shinyPalette
+            screenConfig.conversion,
         )
 
         is ScreenConfig.Conversion -> ConversionComponent(
@@ -57,18 +51,10 @@ class NavHostComponent(
 
 
     private fun goToPreview(
-        front: List<File>,
-        frontShiny: List<File>,
-        frontInverted: List<File>,
-        back: File,
-        backShiny: File,
-        backInverted: File,
-        shinyPalette: ShinyPalette,
+        conversion: CompleteConversion,
     ) {
         navigation.replaceCurrent(
-            ScreenConfig.Preview(
-                front, frontShiny, frontInverted, back, backShiny, backInverted, shinyPalette
-            )
+            ScreenConfig.Preview(conversion)
         )
     }
 
@@ -85,13 +71,7 @@ class NavHostComponent(
     private sealed class ScreenConfig : Parcelable {
         object PickFiles : ScreenConfig()
         data class Preview(
-            val front: List<File>,
-            val frontShiny: List<File>,
-            val frontInverted: List<File>,
-            val back: File,
-            val backShiny: File,
-            val backInverted: File,
-            val shinyPalette: ShinyPalette,
+            val conversion: CompleteConversion,
         ) : ScreenConfig()
 
         data class Conversion(
