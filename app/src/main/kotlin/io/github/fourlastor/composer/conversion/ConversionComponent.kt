@@ -26,6 +26,7 @@ import com.soywiz.korio.file.std.toVfs
 import io.github.fourlastor.composer.CompleteConversion
 import io.github.fourlastor.composer.Component
 import io.github.fourlastor.composer.ShinyPalette
+import io.github.fourlastor.composer.swap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -65,7 +66,7 @@ class ConversionComponent(
                 shinyBmp.fixColors()
                 progress.update { Progress.InProgress(0.6f) }
                 val palette = shinyBmp.findPalette(backBmp)
-                val invertedPalette = palette.invert()
+                val invertedPalette = palette.swap()
 
                 val frontFiles =
                     withContext(Dispatchers.IO) {
@@ -126,7 +127,6 @@ class ConversionComponent(
         it.write(PNG.encode(this))
     }
 
-    private fun ShinyPalette.invert(): ShinyPalette = (first.first to second.second) to (second.first to first.second)
 
     private fun Bitmap.toShiny(palette: ShinyPalette): Bitmap = clone().apply {
         forEach { _, x, y ->

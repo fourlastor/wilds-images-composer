@@ -39,6 +39,7 @@ import io.github.fourlastor.composer.CompleteConversion
 import io.github.fourlastor.composer.Component
 import io.github.fourlastor.composer.ShinyPalette
 import io.github.fourlastor.composer.extensions.toBitmap
+import io.github.fourlastor.composer.swap
 import io.github.fourlastor.composer.ui.HorizontalSeparator
 import io.github.fourlastor.composer.ui.VerticalSeparator
 
@@ -49,30 +50,36 @@ class PreviewComponent(
 
     @Composable
     override fun render() {
-        val frontImages by remember(conversion) {
+        var swapPalette by remember { mutableStateOf(false) }
+        val frontImages by remember(conversion, swapPalette) {
             derivedStateOf {
                 listOf(
                     conversion.front[0],
-                    conversion.frontShiny[0]
+                    if (swapPalette) conversion.frontInverted[0] else conversion.frontShiny[0]
                 ).map { it.toBitmap() }
             }
         }
-        val backImages by remember(conversion) {
+        val backImages by remember(conversion, swapPalette) {
             derivedStateOf {
                 listOf(
                     conversion.back,
-                    conversion.backShiny
+                    if (swapPalette) conversion.backInverted else conversion.backShiny
                 ).map { it.toBitmap() }
             }
         }
         val animationImages by remember(conversion) { derivedStateOf { conversion.front.map { it.toBitmap() } } }
+        val palette by remember(
+            conversion.palette,
+            swapPalette
+        ) { derivedStateOf { if (swapPalette) conversion.palette.swap() else conversion.palette } }
         Preview(
             modifier = Modifier.fillMaxSize(),
             front = frontImages,
             back = backImages,
             animation = animationImages,
-            palette = conversion.palette,
+            palette = palette,
             durations = conversion.durations,
+            onSwapPalette = { swapPalette = !swapPalette }
         )
     }
 }
@@ -85,6 +92,7 @@ private fun Preview(
     animation: List<ImageBitmap>,
     palette: ShinyPalette,
     durations: List<TimeSpan>,
+    onSwapPalette: () -> Unit,
 ) {
     val durationBgColor = remember { Color(0f, 0f, 0f, 0.4f) }
     Column(modifier) {
@@ -108,7 +116,11 @@ private fun Preview(
         }
         HorizontalSeparator()
         Row(modifier = Modifier.weight(3f).fillMaxWidth()) {
-            SwapPaletteControl(modifier = Modifier.weight(1f).fillMaxHeight(), palette = palette)
+            SwapPaletteControl(
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                palette = palette,
+                onSwap = onSwapPalette,
+            )
             VerticalSeparator()
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 var name by remember { mutableStateOf("") }
@@ -130,9 +142,12 @@ private fun Preview(
 private fun SwapPaletteControl(
     modifier: Modifier,
     palette: ShinyPalette,
+    onSwap: () -> Unit,
 ) {
-    val color1 = remember { palette.first.second.let { Color(it.r, it.g, it.b) } }
-    val color2 = remember { palette.second.second.let { Color(it.r, it.g, it.b) } }
+    val color1 by remember(palette) { derivedStateOf { palette.first.second.let { Color(it.r, it.g, it.b) } } }
+    val color2 by remember(palette) { derivedStateOf { palette.second.second.let { Color(it.r, it.g, it.b) } } }
+    println(color1)
+    println(color2)
     Column(modifier.padding(4.dp)) {
         Text("Shiny palette", fontSize = 24.sp)
         Row(Modifier.fillMaxWidth().weight(1f)) {
@@ -142,7 +157,8 @@ private fun SwapPaletteControl(
                     painter = painterResource("swap.svg"),
                     contentDescription = "Swap palettes",
                     modifier = Modifier.align(Alignment.Center)
-                        .size(40.dp).clickable { }
+                        .size(40.dp)
+                        .clickable { onSwap() }
                 )
             }
             ColorPreview(modifier = Modifier.align(Alignment.CenterVertically), color = color2)
