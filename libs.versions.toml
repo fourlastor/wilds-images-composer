@@ -12,7 +12,7 @@ decompose-core = { module = "com.arkivanov.decompose:decompose", version.ref = "
 decompose-jetbrains = { module = "com.arkivanov.decompose:extensions-compose-jetbrains", version.ref = "decompose" }
 gdx-core = { module = "com.badlogicgames.gdx:gdx", version.ref = "gdx" }
 gdx-platform = { module = "com.badlogicgames.gdx:gdx-platform", version.ref = "gdx" }
-korge-korim = { module = "com.soywiz.korlibs.korim:korim", version.ref = "korge" }
+korge-korim = { module = "com.soywiz.korlibs.korim:korim-jvm", version.ref = "korge" }
 lwjgl-core = { module = "org.lwjgl:lwjgl", version.ref = "lwjgl" }
 lwjgl-nfd = { module = "org.lwjgl:lwjgl-nfd", version.ref = "lwjgl" }
 [plugins]
