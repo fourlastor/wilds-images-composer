@@ -8,6 +8,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     alias(libs.plugins.compose)
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.shadow)
     alias(libs.plugins.spotless)
 }
@@ -41,6 +42,7 @@ dependencies {
     implementation(libs.decompose.core)
     implementation(libs.decompose.jetbrains)
     implementation(libs.korge.korim)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.lwjgl.core)
     implementation(libs.lwjgl.nfd)
     for (it in listOf("linux", "macos", "macos-arm64", "windows")) {
