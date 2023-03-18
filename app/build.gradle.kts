@@ -61,6 +61,7 @@ fun DependencyHandlerScope.natives(
 ) = runtimeOnly(variantOf(provider) { classifier("natives-$classifier") })
 
 val downloadJdk = tasks.create<Download>("downloadJdk") {
+    group = "jdk"
     val fileName =
         if (currentOs.isWindows) "jbrsdk-17.0.6-windows-x64-b829.5.tar.gz" else "jbrsdk-17.0.6-linux-x64-b829.5.tar.gz"
     src("https://cache-redirector.jetbrains.com/intellij-jbr/$fileName")
@@ -69,6 +70,7 @@ val downloadJdk = tasks.create<Download>("downloadJdk") {
 
 val unzipJdk = tasks.create<Copy>("unzipJdk") {
     dependsOn(downloadJdk)
+    group = "jdk"
     val jdkDir = downloadJdk.dest
     from(tarTree(jdkDir)) {
         val includePath = jdkDir.name.removeSuffix(".tar.gz")
@@ -89,6 +91,7 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "wilds-image-composer"
             packageVersion = "1.0.0"
+            outputBaseDir.set(rootDir.resolve("out"))
         }
     }
 }
