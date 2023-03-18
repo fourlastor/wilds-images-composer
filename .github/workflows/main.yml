@@ -11,29 +11,18 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest ]
-        include:
-          - os: ubuntu-latest
-            jbr: 'https://cache-redirector.jetbrains.com/intellij-jbr/jbr-17.0.6-linux-x64-b829.5.tar.gz'
-            jbrVersion: '/jbr-17.0.6-linux-x64-b829.5/'
-          - os: windows-latest
-            jbr: 'https://cache-redirector.jetbrains.com/intellij-jbr/jbr-17.0.6-windows-x64-b829.5.tar.gz'
-            jbrVersion: '/jbr-17.0.6-windows-x64-b829.5/'
+        os: [ ubuntu-latest, windows-latest ]
     steps:
       - uses: actions/checkout@v3
-      - name: Download jbr
-        uses: carlosperate/download-file-action@v2
-        id: download-file
-        with:
-          file-url: ${{ matrix.jbr }}
-          file-name: 'java_package.tar.gz'
-          location: './jre'
       - uses: actions/setup-java@v3
         with:
-          distribution: 'jdkfile'
-          jdkFile: jre/java_package.tar.gz
-          java-version: ${{ matrix.jbrVersion }}
+          distribution: 'temurin'
+          java-version: '17'
           cache: 'gradle'
+      - name: Build
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: --no-daemon unzipJdk
       - name: Build
         uses: gradle/gradle-build-action@v2
         with:
