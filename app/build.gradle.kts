@@ -92,6 +92,7 @@ compose.desktop {
             packageName = "wilds-image-composer"
             packageVersion = "1.0.0"
             outputBaseDir.set(rootDir.resolve("out"))
+            includeAllModules = true
         }
     }
 }
