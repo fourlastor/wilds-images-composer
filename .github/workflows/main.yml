@@ -22,7 +22,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
-      - name: Build
+      - name: Cache JDK
+        id: cache-jdk
+        uses: actions/cache@v3
+        with:
+          path: jdk
+          key: ${{ runner.os }}-jdk
+      - name: Download JDK
+        if: steps.cache-appimagetool.outputs.cache-hit != 'true'
         uses: gradle/gradle-build-action@v2
         with:
           arguments: --no-daemon unzipJdk
