@@ -11,12 +11,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ ubuntu-latest ]
         include:
           - os: ubuntu-latest
             jbr: 'https://cache-redirector.jetbrains.com/intellij-jbr/jbr-17.0.6-linux-x64-b829.5.tar.gz'
+            jbrVersion: '/jbr-17.0.6-linux-x64-b829.5/'
           - os: windows-latest
             jbr: 'https://cache-redirector.jetbrains.com/intellij-jbr/jbr-17.0.6-windows-x64-b829.5.tar.gz'
+            jbrVersion: '/jbr-17.0.6-windows-x64-b829.5/'
     steps:
       - uses: actions/checkout@v3
       - name: Download jbr
@@ -30,8 +32,7 @@ jobs:
         with:
           distribution: 'jdkfile'
           jdkFile: jre/java_package.tar.gz
-          java-version: '17.0.6'
-          architecture: x64
+          java-version: ${{ matrix.jbrVersion }}
           cache: 'gradle'
       - name: Build
         uses: gradle/gradle-build-action@v2
