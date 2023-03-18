@@ -102,3 +102,6 @@ gradle-app.setting
 
 ### JDK download folder
 jdk/
+
+### Wix toolkit (used by windows packaging)
+wix311/
