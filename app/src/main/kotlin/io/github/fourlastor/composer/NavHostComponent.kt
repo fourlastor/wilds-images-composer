@@ -34,6 +34,7 @@ class NavHostComponent(
         is ScreenConfig.Preview -> PreviewComponent(
             context,
             screenConfig.conversion,
+            ::goToPickFiles
         )
 
         is ScreenConfig.Conversion -> ConversionComponent(
@@ -43,6 +44,10 @@ class NavHostComponent(
             back = screenConfig.back,
             shiny = screenConfig.shiny,
         )
+    }
+
+    private fun goToPickFiles() {
+        navigation.replaceCurrent(ScreenConfig.PickFiles)
     }
 
     private fun goToConversion(front: File, back: File, shiny: File) {

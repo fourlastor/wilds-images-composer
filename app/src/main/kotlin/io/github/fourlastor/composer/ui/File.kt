@@ -37,10 +37,22 @@ fun FileSaveDialog(
 }
 
 @Composable
+fun PickFolderDialog(
+    onCloseRequest: (result: File?) -> Unit,
+    initialPath: String? = null,
+) {
+    FileDialog(
+        type = Type.PickFolder,
+        onCloseRequest = onCloseRequest,
+        initialPath = initialPath,
+    )
+}
+
+@Composable
 private fun FileDialog(
     type: Type,
     initialPath: String?,
-    filterList: List<String>,
+    filterList: List<String> = emptyList(),
     onCloseRequest: (result: File?) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -61,6 +73,7 @@ private fun FileDialog(
                 val status = when (type) {
                     Type.Load -> NativeFileDialog.NFD_OpenDialog(filterList.joinToString(","), path, pathPointer)
                     Type.Save -> NativeFileDialog.NFD_SaveDialog(filterList.joinToString(","), path, pathPointer)
+                    Type.PickFolder -> NativeFileDialog.NFD_PickFolder(path, pathPointer)
                 }
 
 
@@ -94,5 +107,5 @@ private fun FileDialog(
 private fun inWindows() = System.getProperty("os.name").lowercase().contains("win")
 
 private enum class Type {
-    Load, Save
+    Load, Save, PickFolder
 }

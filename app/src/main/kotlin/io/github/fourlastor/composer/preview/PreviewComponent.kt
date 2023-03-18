@@ -21,6 +21,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,27 +35,69 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.essenty.lifecycle.doOnDestroy
 import com.soywiz.klock.TimeSpan
 import io.github.fourlastor.composer.CompleteConversion
 import io.github.fourlastor.composer.Component
 import io.github.fourlastor.composer.extensions.toBitmap
 import io.github.fourlastor.composer.swap
 import io.github.fourlastor.composer.ui.HorizontalSeparator
+import io.github.fourlastor.composer.ui.PickFolderDialog
 import io.github.fourlastor.composer.ui.VerticalSeparator
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.skiko.MainUIDispatcher
 import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 class PreviewComponent(
     private val context: ComponentContext,
     conversion: CompleteConversion,
+    private val goToPickFiles: () -> Unit,
 ) : Component, ComponentContext by context {
 
+    private val scope = CoroutineScope(Dispatchers.Default + Job())
+
+    init {
+        lifecycle.doOnDestroy { scope.cancel() }
+    }
+
     private val data = MutableStateFlow(Data(conversion, false, "", ""))
-    private val stateFlow = data.map { it.toState() }
+    private val showFileSelect = MutableStateFlow(false)
+    private val stateFlow =
+        data.combine(showFileSelect) { it, showSelect -> if (showSelect) PreviewState.PickSaveFile else it.toState() }
+
+    private fun save(location: File) {
+        val current = data.value
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                File(location, "${current.name}.zip")
+                    .outputStream().buffered()
+                    .let { ZipOutputStream(it) }.use { zip ->
+                        zip.putNextEntry(ZipEntry("front.png"))
+                        current.conversion.front[0].inputStream().buffered().copyTo(zip)
+                        zip.putNextEntry(ZipEntry("back.png"))
+                        current.conversion.back.inputStream().buffered().copyTo(zip)
+                        current.conversion.front.forEachIndexed { index, file ->
+                            zip.putNextEntry(ZipEntry("animation/$index.png"))
+                            file.inputStream().buffered().copyTo(zip)
+                        }
+                    }
+            }
+            withContext(MainUIDispatcher) {
+                goToPickFiles()
+            }
+        }
+
+    }
 
     private suspend fun Data.toState(): PreviewState {
         val palette = if (swapPalette) conversion.palette.swap() else conversion.palette
@@ -80,16 +123,37 @@ class PreviewComponent(
 
     @Composable
     override fun render() {
-        val state by stateFlow.collectAsState(PreviewState.Loading)
-        val ready = state as? PreviewState.Ready ?: return
-        Preview(
-            modifier = Modifier.fillMaxSize(),
-            onSwapPalette = { data.update { it.copy(swapPalette = !it.swapPalette) } },
-            state = ready,
-            onUpdateName = { name -> data.update { it.copy(name = name) } },
-            onUpdateCredits = { credits -> data.update { it.copy(credits = credits) } },
-        )
+        val current by stateFlow.collectAsState(PreviewState.Loading)
+        when (val state = current) {
+            is PreviewState.Ready -> Preview(
+                modifier = Modifier.fillMaxSize(),
+                onSwapPalette = { data.update { it.copy(swapPalette = !it.swapPalette) } },
+                state = state,
+                onUpdateName = { name -> data.update { it.copy(name = name) } },
+                onUpdateCredits = { credits -> data.update { it.copy(credits = credits) } },
+                onSaveRequest = { showFileSelect.update { true } }
+            )
+
+            PreviewState.Loading -> {}
+            PreviewState.PickSaveFile -> PickSaveFile(
+                onSave = ::save,
+                onSaveAbort = { showFileSelect.update { false } }
+            )
+        }
     }
+}
+
+@Composable
+private fun PickSaveFile(onSave: (File) -> Unit, onSaveAbort: () -> Unit) {
+    PickFolderDialog(
+        onCloseRequest = {
+            if (it != null) {
+                onSave(it)
+            } else {
+                onSaveAbort()
+            }
+        }
+    )
 }
 
 @Composable
@@ -99,6 +163,7 @@ private fun Preview(
     state: PreviewState.Ready,
     onUpdateCredits: (String) -> Unit,
     onUpdateName: (String) -> Unit,
+    onSaveRequest: () -> Unit,
 ) {
     Column(modifier) {
         PreviewRow(
@@ -116,6 +181,7 @@ private fun Preview(
             onSwapPalette = onSwapPalette,
             onUpdateCredits = onUpdateCredits,
             onUpdateName = onUpdateName,
+            onSave = onSaveRequest,
         )
     }
 }
@@ -157,7 +223,11 @@ private fun ControlsRow(
     onSwapPalette: () -> Unit,
     onUpdateName: (String) -> Unit,
     onUpdateCredits: (String) -> Unit,
+    onSave: () -> Unit,
 ) {
+    var name by remember { mutableStateOf("") }
+    val saveEnabled by remember(name) { derivedStateOf { name.isNotEmpty() } }
+    var credits by remember { mutableStateOf("") }
     Row(modifier = modifier) {
         SwapPaletteControl(
             modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -167,8 +237,6 @@ private fun ControlsRow(
         )
         VerticalSeparator()
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            var name by remember { mutableStateOf("") }
-            var credits by remember { mutableStateOf("") }
             TextField(value = name, onValueChange = {
                 name = it
                 onUpdateName(it)
@@ -180,7 +248,7 @@ private fun ControlsRow(
         }
         VerticalSeparator()
         Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(4.dp)) {
-            Button(modifier = Modifier.fillMaxSize(), onClick = {}) {
+            Button(modifier = Modifier.fillMaxSize(), onClick = { onSave() }, enabled = saveEnabled) {
                 Text("Save", fontSize = 40.sp)
             }
         }
@@ -264,6 +332,9 @@ private data class Data(
 
 private sealed interface PreviewState {
     object Loading : PreviewState
+
+    object PickSaveFile : PreviewState
+
     data class Ready(
         val front: List<ImageBitmap>,
         val back: List<ImageBitmap>,
