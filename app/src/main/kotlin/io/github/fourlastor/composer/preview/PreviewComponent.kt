@@ -53,7 +53,7 @@ class PreviewComponent(
     conversion: CompleteConversion,
 ) : Component, ComponentContext by context {
 
-    private val data = MutableStateFlow(Data(conversion, false))
+    private val data = MutableStateFlow(Data(conversion, false, "", ""))
     private val stateFlow = data.map { it.toState() }
 
     private suspend fun Data.toState(): PreviewState {
@@ -84,8 +84,10 @@ class PreviewComponent(
         val ready = state as? PreviewState.Ready ?: return
         Preview(
             modifier = Modifier.fillMaxSize(),
+            onSwapPalette = { data.update { it.copy(swapPalette = !it.swapPalette) } },
             state = ready,
-            onSwapPalette = { data.update { it.copy(swapPalette = !it.swapPalette) } }
+            onUpdateName = { name -> data.update { it.copy(name = name) } },
+            onUpdateCredits = { credits -> data.update { it.copy(credits = credits) } },
         )
     }
 }
@@ -95,6 +97,8 @@ private fun Preview(
     modifier: Modifier,
     onSwapPalette: () -> Unit,
     state: PreviewState.Ready,
+    onUpdateCredits: (String) -> Unit,
+    onUpdateName: (String) -> Unit,
 ) {
     Column(modifier) {
         PreviewRow(
@@ -110,6 +114,8 @@ private fun Preview(
             color1 = state.color1,
             color2 = state.color2,
             onSwapPalette = onSwapPalette,
+            onUpdateCredits = onUpdateCredits,
+            onUpdateName = onUpdateName,
         )
     }
 }
@@ -149,6 +155,8 @@ private fun ControlsRow(
     color1: Color,
     color2: Color,
     onSwapPalette: () -> Unit,
+    onUpdateName: (String) -> Unit,
+    onUpdateCredits: (String) -> Unit,
 ) {
     Row(modifier = modifier) {
         SwapPaletteControl(
@@ -161,8 +169,14 @@ private fun ControlsRow(
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
             var name by remember { mutableStateOf("") }
             var credits by remember { mutableStateOf("") }
-            TextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true)
-            TextField(value = credits, onValueChange = { credits = it }, label = { Text("Credits") })
+            TextField(value = name, onValueChange = {
+                name = it
+                onUpdateName(it)
+            }, label = { Text("Name") }, singleLine = true)
+            TextField(value = credits, onValueChange = {
+                credits = it
+                onUpdateCredits(it)
+            }, label = { Text("Credits") })
         }
         VerticalSeparator()
         Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(4.dp)) {
@@ -243,6 +257,8 @@ private fun PreviewImage(
 private data class Data(
     val conversion: CompleteConversion,
     val swapPalette: Boolean,
+    val name: String,
+    val credits: String,
 )
 
 
