@@ -66,6 +66,7 @@ val downloadJdk = tasks.create<Download>("downloadJdk") {
         if (currentOs.isWindows) "jbrsdk-17.0.6-windows-x64-b829.5.tar.gz" else "jbrsdk-17.0.6-linux-x64-b829.5.tar.gz"
     src("https://cache-redirector.jetbrains.com/intellij-jbr/$fileName")
     dest(buildDir.resolve(fileName))
+    quiet(true)
 }
 
 val unzipJdk = tasks.create<Copy>("unzipJdk") {
