@@ -53,6 +53,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToStream
 import org.jetbrains.skiko.MainUIDispatcher
 import java.io.File
 import java.util.zip.ZipEntry
@@ -75,9 +79,11 @@ class PreviewComponent(
     private val stateFlow =
         data.combine(showFileSelect) { it, showSelect -> if (showSelect) PreviewState.PickSaveFile else it.toState() }
 
+    @OptIn(ExperimentalSerializationApi::class)
     private fun save(location: File) {
         val current = data.value
         scope.launch {
+            val palette = if (current.swapPalette) current.conversion.palette.swap() else current.conversion.palette
             withContext(Dispatchers.IO) {
                 File(location, "${current.name}.zip")
                     .outputStream().buffered()
@@ -86,6 +92,17 @@ class PreviewComponent(
                         current.conversion.front[0].inputStream().buffered().copyTo(zip)
                         zip.putNextEntry(ZipEntry("back.png"))
                         current.conversion.back.inputStream().buffered().copyTo(zip)
+                        zip.putNextEntry(ZipEntry("data.json"))
+                        Json.encodeToStream(
+                            JsonFile(
+                                animationFrameDurations = current.conversion.durations.map { it.millisecondsLong },
+                                credits = current.credits,
+                                palette = JsonPalette(
+                                    color1 = palette.first.first.hexStringNoAlpha to palette.first.second.hexStringNoAlpha,
+                                    color2 = palette.second.first.hexStringNoAlpha to palette.second.second.hexStringNoAlpha,
+                                )
+                            ), zip
+                        )
                         current.conversion.front.forEachIndexed { index, file ->
                             zip.putNextEntry(ZipEntry("animation/$index.png"))
                             file.inputStream().buffered().copyTo(zip)
@@ -321,6 +338,19 @@ private fun PreviewImage(
         }
     }
 }
+
+@Serializable
+private data class JsonFile(
+    val animationFrameDurations: List<Long>,
+    val credits: String,
+    val palette: JsonPalette,
+)
+
+@Serializable
+private data class JsonPalette(
+    val color1: Pair<String, String>,
+    val color2: Pair<String, String>,
+)
 
 private data class Data(
     val conversion: CompleteConversion,
