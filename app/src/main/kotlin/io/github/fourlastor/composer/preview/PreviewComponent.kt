@@ -57,7 +57,6 @@ class PreviewComponent(
     private val stateFlow = data.map { it.toState() }
 
     private suspend fun Data.toState(): PreviewState {
-
         val palette = if (swapPalette) conversion.palette.swap() else conversion.palette
         return PreviewState.Ready(
             front = listOf(
