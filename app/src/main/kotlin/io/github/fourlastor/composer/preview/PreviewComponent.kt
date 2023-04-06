@@ -3,29 +3,13 @@ package io.github.fourlastor.composer.preview
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,23 +28,21 @@ import io.github.fourlastor.composer.swap
 import io.github.fourlastor.composer.ui.HorizontalSeparator
 import io.github.fourlastor.composer.ui.PickFolderDialog
 import io.github.fourlastor.composer.ui.VerticalSeparator
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
 import org.jetbrains.skiko.MainUIDispatcher
+import java.awt.image.BufferedImage
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.imageio.ImageIO
+
 
 class PreviewComponent(
     private val context: ComponentContext,
@@ -82,6 +64,7 @@ class PreviewComponent(
     @OptIn(ExperimentalSerializationApi::class)
     private fun save(location: File) {
         val current = data.value
+
         scope.launch {
             val palette = if (current.swapPalette) current.conversion.palette.swap() else current.conversion.palette
             withContext(Dispatchers.IO) {
@@ -107,6 +90,33 @@ class PreviewComponent(
                             zip.putNextEntry(ZipEntry("animation/$index.png"))
                             file.inputStream().buffered().copyTo(zip)
                         }
+                    }
+            }
+            withContext(Dispatchers.IO) {
+                File(location, "${current.name}-v08.zip")
+                    .outputStream().buffered()
+                    .let { ZipOutputStream(it) }.use { zip ->
+
+                        // Note: the fact that this is ARBG and not RGBA may cause issues.
+                        // https://stackoverflow.com/questions/65569243/getting-a-rgba-byte-array-from-a-bufferedimage-java
+                        val firstPng = ImageIO.read(current.conversion.front[0])
+                        val combinedHeight = current.conversion.front.sumBy { ImageIO.read(it).height }
+                        val maxWidth = current.conversion.front.map { ImageIO.read(it).width }.maxOrNull() ?: 0
+                        //val combinedImage = firstPng.colorModel.createCompatibleWritableRaster(maxWidth, combinedHeight)
+                        val combinedImage = BufferedImage(maxWidth, combinedHeight, BufferedImage.TYPE_INT_ARGB)
+
+                        var currentY = 0
+                        for (file in current.conversion.front) {
+                            val image = ImageIO.read(file)
+                            val convertedImg = BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB)
+                            convertedImg.graphics.drawImage(image, 0, 0, null)
+                            combinedImage.graphics.drawImage(convertedImg, 0, currentY, null)
+                            currentY += image.height
+                        }
+
+                        zip.putNextEntry(ZipEntry("front.png"))
+                        ImageIO.write(combinedImage, "png", zip)
+
                     }
             }
             withContext(MainUIDispatcher) {
