@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.doOnDestroy
 import com.soywiz.klock.TimeSpan
+import com.soywiz.korio.util.DynamicJvm.toInt
 import io.github.fourlastor.composer.CompleteConversion
 import io.github.fourlastor.composer.Component
 import io.github.fourlastor.composer.extensions.toBitmap
@@ -39,6 +40,7 @@ import kotlinx.serialization.json.encodeToStream
 import org.jetbrains.skiko.MainUIDispatcher
 import java.awt.image.BufferedImage
 import java.io.File
+import java.io.OutputStreamWriter
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.imageio.ImageIO
@@ -105,6 +107,8 @@ class PreviewComponent(
                         //val combinedImage = firstPng.colorModel.createCompatibleWritableRaster(maxWidth, combinedHeight)
                         val combinedImage = BufferedImage(maxWidth, combinedHeight, BufferedImage.TYPE_INT_ARGB)
 
+                        var index = 0
+                        val animAsm = mutableListOf<String>()
                         var currentY = 0
                         for (file in current.conversion.front) {
                             val image = ImageIO.read(file)
@@ -112,11 +116,49 @@ class PreviewComponent(
                             convertedImg.graphics.drawImage(image, 0, 0, null)
                             combinedImage.graphics.drawImage(convertedImg, 0, currentY, null)
                             currentY += image.height
+
+                            // anim.asm
+                            var duration = (current.conversion.durations[index].milliseconds / 1000.0) * 60.0;
+                            animAsm.add("	frame %d, %02d".format(index, toInt(duration)))
+                            index += 1
                         }
+                        animAsm.add("	endanim")
 
                         zip.putNextEntry(ZipEntry("front.png"))
                         ImageIO.write(combinedImage, "png", zip)
+                        zip.putNextEntry(ZipEntry("back.png"))
+                        current.conversion.back.inputStream().buffered().copyTo(zip)
 
+                        // Write anim asm lines to file.
+                        zip.putNextEntry(ZipEntry("anim.asm"))
+                        // Note: outputStream.close() just calls zip.close,
+                        // so I think it's safe to not close() outputStream.
+                        var outputStream = OutputStreamWriter(zip, Charsets.UTF_8)
+                        animAsm.forEachIndexed { index, string ->
+                            outputStream.write(string)
+                            if (index != animAsm.lastIndex) {
+                                outputStream.write(System.lineSeparator())
+                            }
+                        }
+                        outputStream.flush()
+
+                        // Write credits to file.
+                        zip.putNextEntry(ZipEntry("credits.txt"))
+                        outputStream = OutputStreamWriter(zip, Charsets.UTF_8)
+                        outputStream.write(current.credits)
+                        outputStream.flush()
+
+                        // Write shiny.pal to file
+                        val shinyLines = mutableListOf<String>("")
+                        shinyLines.add("\tRGB %02d, %02d, %02d".format(palette.second.first.r/8, palette.second.first.g/8, palette.second.first.b/8))
+                        shinyLines.add("\tRGB %02d, %02d, %02d".format(palette.first.second.r/8, palette.first.second.g/8, palette.first.second.b/8))
+                        zip.putNextEntry(ZipEntry("shiny.pal"))
+                        outputStream = OutputStreamWriter(zip, Charsets.UTF_8)
+                        shinyLines.forEach { string ->
+                            outputStream.write(string)
+                            outputStream.write(System.lineSeparator())
+                        }
+                        outputStream.flush()
                     }
             }
             withContext(MainUIDispatcher) {
@@ -150,6 +192,7 @@ class PreviewComponent(
 
     @Composable
     override fun render() {
+
         val current by stateFlow.collectAsState(PreviewState.Loading)
         when (val state = current) {
             is PreviewState.Ready -> Preview(
@@ -267,7 +310,7 @@ private fun ControlsRow(
             TextField(value = name, onValueChange = {
                 name = it
                 onUpdateName(it)
-            }, label = { Text("Name") }, singleLine = true)
+            }, label = { Text("Mon Name") }, singleLine = true)
             TextField(value = credits, onValueChange = {
                 credits = it
                 onUpdateCredits(it)
