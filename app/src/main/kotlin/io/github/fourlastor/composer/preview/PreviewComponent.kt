@@ -3,29 +3,13 @@ package io.github.fourlastor.composer.preview
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.doOnDestroy
 import com.soywiz.klock.TimeSpan
+import com.soywiz.korio.util.DynamicJvm.toInt
 import io.github.fourlastor.composer.CompleteConversion
 import io.github.fourlastor.composer.Component
 import io.github.fourlastor.composer.extensions.toBitmap
@@ -44,23 +29,22 @@ import io.github.fourlastor.composer.swap
 import io.github.fourlastor.composer.ui.HorizontalSeparator
 import io.github.fourlastor.composer.ui.PickFolderDialog
 import io.github.fourlastor.composer.ui.VerticalSeparator
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
 import org.jetbrains.skiko.MainUIDispatcher
+import java.awt.image.BufferedImage
 import java.io.File
+import java.io.OutputStreamWriter
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.imageio.ImageIO
+
 
 class PreviewComponent(
     private val context: ComponentContext,
@@ -82,6 +66,7 @@ class PreviewComponent(
     @OptIn(ExperimentalSerializationApi::class)
     private fun save(location: File) {
         val current = data.value
+
         scope.launch {
             val palette = if (current.swapPalette) current.conversion.palette.swap() else current.conversion.palette
             withContext(Dispatchers.IO) {
@@ -109,11 +94,84 @@ class PreviewComponent(
                         }
                     }
             }
+            withContext(Dispatchers.IO) {
+                File(location, "${current.name}-v08.zip")
+                    .outputStream().buffered()
+                    .let { ZipOutputStream(it) }.use { zip ->
+
+                        // Note: the fact that this is ARBG and not RGBA may cause issues.
+                        // https://stackoverflow.com/questions/65569243/getting-a-rgba-byte-array-from-a-bufferedimage-java
+                        val firstPng = ImageIO.read(current.conversion.front[0])
+                        val combinedHeight = current.conversion.front.sumBy { ImageIO.read(it).height }
+                        val maxWidth = current.conversion.front.map { ImageIO.read(it).width }.maxOrNull() ?: 0
+                        //val combinedImage = firstPng.colorModel.createCompatibleWritableRaster(maxWidth, combinedHeight)
+                        val combinedImage = BufferedImage(maxWidth, combinedHeight, BufferedImage.TYPE_INT_ARGB)
+
+                        var index = 0
+                        val animAsm = mutableListOf<String>()
+                        var currentY = 0
+                        for (file in current.conversion.front) {
+                            val image = ImageIO.read(file)
+                            val convertedImg = BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB)
+                            convertedImg.graphics.drawImage(image, 0, 0, null)
+                            combinedImage.graphics.drawImage(convertedImg, 0, currentY, null)
+                            currentY += image.height
+
+                            // anim.asm
+                            var duration = (current.conversion.durations[index].milliseconds / 1000.0) * 60.0;
+                            animAsm.add("	frame %d, %02d".format(index, toInt(duration)))
+                            index += 1
+                        }
+                        animAsm.add("	endanim")
+
+                        zip.putNextEntry(ZipEntry("front.png"))
+                        ImageIO.write(combinedImage, "png", zip)
+                        zip.putNextEntry(ZipEntry("back.png"))
+                        current.conversion.back.inputStream().buffered().copyTo(zip)
+
+                        // Write overworlds to file
+                        zip.putNextEntry(ZipEntry("overworld.png"))
+                        current.conversion.overworld.inputStream().buffered().copyTo(zip)
+                        zip.putNextEntry(ZipEntry("overworld-shiny.png"))
+                        current.conversion.overworldShiny.inputStream().buffered().copyTo(zip)
+
+                        // Write anim asm lines to file.
+                        zip.putNextEntry(ZipEntry("anim.asm"))
+                        // Note: outputStream.close() just calls zip.close,
+                        // so I think it's safe to not close() outputStream.
+                        var outputStream = OutputStreamWriter(zip, Charsets.UTF_8)
+                        animAsm.forEachIndexed { index, string ->
+                            outputStream.write(string)
+                            if (index != animAsm.lastIndex) {
+                                outputStream.write(System.lineSeparator())
+                            }
+                        }
+                        outputStream.flush()
+
+                        // Write credits to file.
+                        zip.putNextEntry(ZipEntry("credits.txt"))
+                        outputStream = OutputStreamWriter(zip, Charsets.UTF_8)
+                        outputStream.write(current.credits)
+                        outputStream.flush()
+
+                        // Write shiny.pal to file
+                        val shinyLines = mutableListOf<String>("")
+                        shinyLines.add("\tRGB %02d, %02d, %02d".format(palette.second.first.r/8, palette.second.first.g/8, palette.second.first.b/8))
+                        shinyLines.add("\tRGB %02d, %02d, %02d".format(palette.first.second.r/8, palette.first.second.g/8, palette.first.second.b/8))
+                        zip.putNextEntry(ZipEntry("shiny.pal"))
+                        outputStream = OutputStreamWriter(zip, Charsets.UTF_8)
+                        shinyLines.forEach { string ->
+                            outputStream.write(string)
+                            outputStream.write(System.lineSeparator())
+                        }
+                        outputStream.flush()
+
+                    }
+            }
             withContext(MainUIDispatcher) {
                 goToPickFiles()
             }
         }
-
     }
 
     private suspend fun Data.toState(): PreviewState {
@@ -140,6 +198,7 @@ class PreviewComponent(
 
     @Composable
     override fun render() {
+
         val current by stateFlow.collectAsState(PreviewState.Loading)
         when (val state = current) {
             is PreviewState.Ready -> Preview(
@@ -257,7 +316,7 @@ private fun ControlsRow(
             TextField(value = name, onValueChange = {
                 name = it
                 onUpdateName(it)
-            }, label = { Text("Name") }, singleLine = true)
+            }, label = { Text("Mon Name") }, singleLine = true)
             TextField(value = credits, onValueChange = {
                 credits = it
                 onUpdateCredits(it)

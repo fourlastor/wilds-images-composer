@@ -45,6 +45,8 @@ class ConversionComponent(
     front: File,
     back: File,
     shiny: File,
+    overworld: File,
+    overworldshiny: File,
 ) : Component, ComponentContext by context {
 
     private val scope = CoroutineScope(Dispatchers.Default + Job())
@@ -93,6 +95,14 @@ class ConversionComponent(
                 val backInvertedFile =
                     withContext(Dispatchers.IO) { File.createTempFile("back_si", ".png").also { it.deleteOnExit() } }
 
+                val overworldImage = withContext(Dispatchers.IO) { PNG.readImage(overworld.toVfs().readAsSyncStream()) }
+                val overworldFile = withContext(Dispatchers.IO) { File.createTempFile("back_", ".png").also { it.deleteOnExit() } }
+                overworldImage.mainBitmap.saveTo(overworldFile)
+                val overworldShinyImage = withContext(Dispatchers.IO) { PNG.readImage(overworldshiny.toVfs().readAsSyncStream()) }
+                val overworldShinyFile = withContext(Dispatchers.IO) { File.createTempFile("back_", ".png").also { it.deleteOnExit() } }
+                overworldShinyImage.mainBitmap.saveTo(overworldShinyFile)
+
+
                 frontFrames.forEachIndexed { index, bitmap ->
                     bitmap.saveTo(frontFiles[index])
                     bitmap.toShiny(palette).saveTo(frontShinyFiles[index])
@@ -110,6 +120,8 @@ class ConversionComponent(
                             backFile,
                             backShinyFile,
                             backInvertedFile,
+                            overworldFile,
+                            overworldShinyFile,
                             palette,
                             durations
                         )
