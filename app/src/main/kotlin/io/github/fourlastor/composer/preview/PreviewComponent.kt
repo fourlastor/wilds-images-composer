@@ -129,6 +129,12 @@ class PreviewComponent(
                         zip.putNextEntry(ZipEntry("back.png"))
                         current.conversion.back.inputStream().buffered().copyTo(zip)
 
+                        // Write overworlds to file
+                        zip.putNextEntry(ZipEntry("overworld.png"))
+                        current.conversion.overworld.inputStream().buffered().copyTo(zip)
+                        zip.putNextEntry(ZipEntry("overworld-shiny.png"))
+                        current.conversion.overworldShiny.inputStream().buffered().copyTo(zip)
+
                         // Write anim asm lines to file.
                         zip.putNextEntry(ZipEntry("anim.asm"))
                         // Note: outputStream.close() just calls zip.close,
@@ -159,13 +165,13 @@ class PreviewComponent(
                             outputStream.write(System.lineSeparator())
                         }
                         outputStream.flush()
+
                     }
             }
             withContext(MainUIDispatcher) {
                 goToPickFiles()
             }
         }
-
     }
 
     private suspend fun Data.toState(): PreviewState {

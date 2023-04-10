@@ -10,6 +10,8 @@ data class CompleteConversion(
     val back: File,
     val backShiny: File,
     val backInverted: File,
+    val overworld: File,
+    val overworldShiny: File,
     val palette: ShinyPalette,
     val durations: List<TimeSpan>,
 )

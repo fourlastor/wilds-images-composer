@@ -47,7 +47,7 @@ import java.io.File
 
 class PickImageComponent(
     private val context: ComponentContext,
-    private val goToConversion: (File, File, File) -> Unit,
+    private val goToConversion: (File, File, File, File, File) -> Unit,
 ) : Component, ComponentContext by context {
     private val scope = CoroutineScope(Dispatchers.Default + Job())
     private val imagesState = MutableStateFlow(Images())
@@ -81,6 +81,8 @@ class PickImageComponent(
                     PickImage.FRONT -> it.copy(front = image)
                     PickImage.BACK -> it.copy(back = image)
                     PickImage.SHINY -> it.copy(shiny = image)
+                    PickImage.OVERWORLD -> it.copy(overworld = image)
+                    PickImage.OVERWORLDSHINY -> it.copy(overworldshiny = image)
                 }
             }
             imageFiles.update {
@@ -89,6 +91,8 @@ class PickImageComponent(
                     PickImage.FRONT -> it.copy(front = file)
                     PickImage.BACK -> it.copy(back = file)
                     PickImage.SHINY -> it.copy(shiny = file)
+                    PickImage.OVERWORLD -> it.copy(overworld = file)
+                    PickImage.OVERWORLDSHINY -> it.copy(overworldshiny = file)
                 }
             }
         }
@@ -98,7 +102,7 @@ class PickImageComponent(
 @Composable
 private fun PickImage(
     modifier: Modifier = Modifier,
-    onContinue: (File, File, File) -> Unit,
+    onContinue: (File, File, File, File, File) -> Unit,
     onImagePicked: (File, PickImage) -> Unit,
     images: Images,
     files: ImageFiles,
@@ -106,8 +110,8 @@ private fun PickImage(
     var pickImage: PickImage by remember { mutableStateOf(PickImage.NONE) }
     val continueState by remember(files) {
         derivedStateOf {
-            if (files.front != null && files.back != null && files.shiny != null) {
-                Continue.Enabled(files.front, files.back, files.shiny)
+            if (files.front != null && files.back != null && files.shiny != null && files.overworld != null && files.overworldshiny != null) {
+                Continue.Enabled(files.front, files.back, files.shiny, files.overworld, files.overworldshiny)
             } else {
                 Continue.Disabled
             }
@@ -134,7 +138,7 @@ private fun PickImage(
                 derivedStateOf {
                     continueState.let {
                         if (it is Continue.Enabled) {
-                            { onContinue(it.front, it.back, it.shiny) }
+                            { onContinue(it.front, it.back, it.shiny, it.overworld, it.overworldshiny) }
                         } else {
                             {}
                         }
@@ -172,6 +176,20 @@ private fun PickImage(
                 onSelectFile = { pickImage = PickImage.SHINY },
                 image = images.shiny,
             )
+            VerticalSeparator()
+            ImageArea(
+                text = "Overworld",
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                onSelectFile = { pickImage = PickImage.OVERWORLD },
+                image = images.overworld,
+            )
+            VerticalSeparator()
+            ImageArea(
+                text = "Overworld Shiny",
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                onSelectFile = { pickImage = PickImage.OVERWORLDSHINY },
+                image = images.overworldshiny,
+            )
         }
     }
 }
@@ -206,6 +224,8 @@ data class ImageFiles(
     val front: File? = null,
     val back: File? = null,
     val shiny: File? = null,
+    val overworld: File? = null,
+    val overworldshiny: File? = null,
 )
 
 sealed interface Continue {
@@ -214,6 +234,8 @@ sealed interface Continue {
         val front: File,
         val back: File,
         val shiny: File,
+        val overworld: File,
+        val overworldshiny: File,
     ) : Continue
 }
 
@@ -221,8 +243,10 @@ data class Images(
     val front: ImageBitmap? = null,
     val back: ImageBitmap? = null,
     val shiny: ImageBitmap? = null,
+    val overworld: ImageBitmap? = null,
+    val overworldshiny: ImageBitmap? = null,
 )
 
 enum class PickImage(val filter: List<String>) {
-    NONE(emptyList()), FRONT(listOf("gif")), BACK(listOf("png")), SHINY(listOf("png"))
+    NONE(emptyList()), FRONT(listOf("gif")), BACK(listOf("png")), SHINY(listOf("png")), OVERWORLD(listOf("png")), OVERWORLDSHINY(listOf("png"))
 }

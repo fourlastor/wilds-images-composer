@@ -43,6 +43,8 @@ class NavHostComponent(
             front = screenConfig.front,
             back = screenConfig.back,
             shiny = screenConfig.shiny,
+            overworld = screenConfig.overworld,
+            overworldshiny = screenConfig.overworldshiny,
         )
     }
 
@@ -50,8 +52,8 @@ class NavHostComponent(
         navigation.replaceCurrent(ScreenConfig.PickFiles)
     }
 
-    private fun goToConversion(front: File, back: File, shiny: File) {
-        navigation.replaceCurrent(ScreenConfig.Conversion(front, back, shiny))
+    private fun goToConversion(front: File, back: File, shiny: File, overworld: File, overworldshiny: File) {
+        navigation.replaceCurrent(ScreenConfig.Conversion(front, back, shiny, overworld, overworldshiny))
     }
 
 
@@ -83,6 +85,8 @@ class NavHostComponent(
             val front: File,
             val back: File,
             val shiny: File,
+            val overworld: File,
+            val overworldshiny: File,
         ) : ScreenConfig()
     }
 }
